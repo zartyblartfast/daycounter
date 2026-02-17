@@ -136,6 +136,48 @@
     <p><em>No evidence files to hash.</em></p>
     {% endif %}
 
+    <h2>Evidence Manifest</h2>
+    <p><em>Verifiable audit trail of all evidence held at statement generation time.</em></p>
+    {% if evidence_files %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Original Filename</th>
+                <th>SHA-256 Hash</th>
+                <th>Uploaded</th>
+                <th>Category</th>
+                <th>Tags</th>
+                <th>Linked Travel</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ef in evidence_files %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ ef.original_filename }}</td>
+                <td class="hash">{{ ef.file_hash }}</td>
+                <td>{{ ef.uploaded_at.strftime('%d %b %Y %H:%M UTC') }}</td>
+                <td>{{ (ef.category or 'other') | replace('_', ' ') | title }}</td>
+                <td>{{ ef.tags or '—' }}</td>
+                <td>
+                    {% if ef.travel %}
+                    {{ ef.travel.destination_country }}
+                    ({{ ef.travel.arrival_date.strftime('%d %b %Y') }} &ndash;
+                    {{ ef.travel.return_date.strftime('%d %b %Y') if ef.travel.return_date else 'ongoing' }})
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p><strong>Total evidence files:</strong> {{ evidence_files|length }}</p>
+    {% else %}
+    <p><em>No evidence files recorded for this tax year.</em></p>
+    {% endif %}
+
     <div class="disclaimer">
         <strong>⚠️ Disclaimer:</strong> This document is generated for personal planning and record-keeping purposes only.
         It does not constitute tax advice. Consult a qualified tax adviser for guidance on UK tax residency matters.

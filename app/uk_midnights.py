@@ -217,3 +217,99 @@ def compute_country_breakdown(day_details: dict) -> list:
         })
 
     return result
+
+
+def detect_overlaps(travels) -> list:
+    """Detect overlapping travel records with different destinations.
+
+    Two trips overlap when they have DIFFERENT destinations and their
+    midnight ranges intersect.  The midnight range for a trip is
+    [arrival_date, return_date) — i.e. arrival_date <= day < return_date.
+    Open-ended trips (no return_date) use today's date as the effective end.
+
+    Args:
+        travels: list of Travel model instances (or dicts with same keys)
+
+    Returns:
+        list of dicts, each with:
+            - 'trip_a': dict with id, destination, arrival, return_date
+            - 'trip_b': dict with id, destination, arrival, return_date
+            - 'overlap_start': datetime.date
+            - 'overlap_end': datetime.date  (exclusive)
+            - 'message': human-readable warning string
+    """
+    today = datetime.date.today()
+    warnings = []
+
+    # Normalise travel records into a uniform list of dicts
+    normalised = []
+    for t in travels:
+        if isinstance(t, dict):
+            arr = t["arrival_date"]
+            ret = t.get("return_date")
+            dest = t.get("destination_country", "")
+            tid = t.get("id")
+        else:
+            arr = t.arrival_date
+            ret = t.return_date
+            dest = t.destination_country
+            tid = t.id
+
+        if isinstance(arr, str):
+            arr = datetime.date.fromisoformat(arr)
+        if isinstance(ret, str):
+            ret = datetime.date.fromisoformat(ret)
+
+        effective_end = ret if ret is not None else today
+        # Skip zero-length stays (same-day arrival/departure)
+        if arr >= effective_end:
+            continue
+
+        normalised.append({
+            "id": tid,
+            "destination": dest,
+            "arrival": arr,
+            "return_date": ret,
+            "effective_end": effective_end,
+        })
+
+    # Compare all pairs
+    for i in range(len(normalised)):
+        for j in range(i + 1, len(normalised)):
+            a = normalised[i]
+            b = normalised[j]
+
+            # Only flag overlaps between DIFFERENT destinations
+            if a["destination"] == b["destination"]:
+                continue
+
+            # Check interval overlap: [a.arrival, a.effective_end) ∩ [b.arrival, b.effective_end)
+            overlap_start = max(a["arrival"], b["arrival"])
+            overlap_end = min(a["effective_end"], b["effective_end"])
+
+            if overlap_start < overlap_end:
+                warnings.append({
+                    "trip_a": {
+                        "id": a["id"],
+                        "destination": a["destination"],
+                        "arrival": a["arrival"],
+                        "return_date": a["return_date"],
+                    },
+                    "trip_b": {
+                        "id": b["id"],
+                        "destination": b["destination"],
+                        "arrival": b["arrival"],
+                        "return_date": b["return_date"],
+                    },
+                    "overlap_start": overlap_start,
+                    "overlap_end": overlap_end,
+                    "message": (
+                        f"Overlap: {a['destination']} "
+                        f"({a['arrival']} – {a['return_date'] or 'ongoing'}) "
+                        f"and {b['destination']} "
+                        f"({b['arrival']} – {b['return_date'] or 'ongoing'}) "
+                        f"conflict on {overlap_start} – {overlap_end}"
+                    ),
+                })
+
+    return warnings

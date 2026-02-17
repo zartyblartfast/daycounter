@@ -48,6 +48,26 @@
     </div>
 </div>
 
+<!-- Overlap Warnings -->
+{% if overlap_warnings %}
+<div class="row mb-4">
+    <div class="col-12">
+        {% for warning in overlap_warnings %}
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>
+                <strong>Travel Overlap Detected:</strong>
+                {{ warning.trip_a.destination }} ({{ warning.trip_a.arrival.strftime('%d %b %Y') }} &ndash; {{ warning.trip_a.return_date.strftime('%d %b %Y') if warning.trip_a.return_date else 'ongoing' }})
+                conflicts with
+                {{ warning.trip_b.destination }} ({{ warning.trip_b.arrival.strftime('%d %b %Y') }} &ndash; {{ warning.trip_b.return_date.strftime('%d %b %Y') if warning.trip_b.return_date else 'ongoing' }})
+                &mdash; overlapping dates: {{ warning.overlap_start.strftime('%d %b %Y') }} to {{ warning.overlap_end.strftime('%d %b %Y') }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     <!-- UK Presence Control Profile Panel -->
     <div class="col-lg-6 mb-4">

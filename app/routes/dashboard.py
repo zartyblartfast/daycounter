@@ -1,4 +1,3 @@
-
 """Dashboard route — main landing page."""
 import datetime
 from flask import Blueprint, render_template
@@ -14,7 +13,11 @@ from app.tax_year import (
     _parse_label,
 )
 from app.profiles import get_profile_for_tax_year, compute_risk_status, risk_badge_class
-from app.uk_midnights import compute_uk_midnights_for_tax_year, compute_country_breakdown
+from app.uk_midnights import (
+    compute_uk_midnights_for_tax_year,
+    compute_country_breakdown,
+    detect_overlaps,
+)
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -53,6 +56,9 @@ def index():
 
     # Per-country breakdown
     country_breakdown = compute_country_breakdown(midnight_data["day_details"])
+
+    # Overlap detection
+    overlap_warnings = detect_overlaps(travels)
 
     # Risk status
     risk_status = "N/A"
@@ -143,4 +149,5 @@ def index():
         next_travel=next_travel,
         config=config,
         country_breakdown=country_breakdown,
+        overlap_warnings=overlap_warnings,
     )
