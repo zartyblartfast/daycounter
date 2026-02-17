@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Travel — DayTracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-airplane"></i> {{ action }} Travel Record</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="post"
+                      action="{% if travel %}{{ url_for('travels.edit_travel', travel_id=travel.id) }}{% else %}{{ url_for('travels.add_travel') }}{% endif %}">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="departure_date" class="form-label">Departure Date *</label>
+                            <input type="date" class="form-control" id="departure_date" name="departure_date"
+                                   value="{{ travel.departure_date.isoformat() if travel and travel.departure_date else '' }}"
+                                   required>
+                            <div class="form-text">Date you left your previous location.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="arrival_date" class="form-label">Arrival Date *</label>
+                            <input type="date" class="form-control" id="arrival_date" name="arrival_date"
+                                   value="{{ travel.arrival_date.isoformat() if travel and travel.arrival_date else '' }}"
+                                   required>
+                            <div class="form-text">Date you arrived at destination.</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="destination_country" class="form-label">Destination Country *</label>
+                            <input type="text" class="form-control" id="destination_country" name="destination_country"
+                                   value="{{ travel.destination_country if travel else '' }}"
+                                   placeholder="e.g. United Kingdom, France, Spain"
+                                   required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="return_date" class="form-label">Return/Departure Date</label>
+                            <input type="date" class="form-control" id="return_date" name="return_date"
+                                   value="{{ travel.return_date.isoformat() if travel and travel.return_date else '' }}">
+                            <div class="form-text">Date you left this destination.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="is_uk" name="is_uk"
+                                       {% if travel and travel.is_uk %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="is_uk">
+                                    <i class="bi bi-flag"></i> UK Stay
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                                  placeholder="Optional notes about this travel...">{{ travel.notes if travel and travel.notes else '' }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> {{ action }} Travel
+                        </button>
+                        <a href="{{ url_for('travels.list_travels') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Tips</h6>
+            </div>
+            <div class="card-body small">
+                <ul class="mb-0">
+                    <li><strong>Departure Date</strong>: When you left your previous location (e.g., left the UK).</li>
+                    <li><strong>Arrival Date</strong>: When you arrived at the destination. This is the first night you sleep there.</li>
+                    <li><strong>Return Date</strong>: When you left this destination. This day is NOT counted as a midnight at this location.</li>
+                    <li><strong>UK Stay</strong>: Check this if the destination is in the UK. UK midnights are counted from arrival date up to (but not including) return date.</li>
+                    <li>Leave Return Date empty if you're still at this destination.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

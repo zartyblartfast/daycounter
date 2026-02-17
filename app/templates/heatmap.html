@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Heatmap — DayTracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-grid-3x3"></i> UK Presence Heatmap</h2>
+        <p class="text-muted mb-0">Visual calendar of your UK presence throughout the tax year.</p>
+    </div>
+    <div class="col-md-4">
+        <form method="get" class="d-flex align-items-center justify-content-end">
+            <label class="me-2 text-nowrap">Tax Year:</label>
+            <select name="tax_year" class="form-select form-select-sm" onchange="this.form.submit()">
+                {% for yr in available_years %}
+                <option value="{{ yr }}" {% if yr == tax_year %}selected{% endif %}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Headline Stats -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-4">
+                    <div>
+                        <span class="fs-4 fw-bold text-primary">{{ midnight_data.total }}</span>
+                        <span class="text-muted">UK midnights</span>
+                    </div>
+                    {% if profile %}
+                    <div>
+                        <span class="fs-4 fw-bold text-warning">{{ profile.target_midnights }}</span>
+                        <span class="text-muted">target</span>
+                    </div>
+                    <div>
+                        <span class="fs-4 fw-bold text-danger">{{ profile.stat_limit_midnights }}</span>
+                        <span class="text-muted">limit</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <span class="badge {{ badge_class }} fs-6">{{ risk_status }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex gap-3 align-items-center">
+            <span class="text-muted small">Legend:</span>
+            <span><span class="heatmap-cell heatmap-uk d-inline-block"></span> UK midnight</span>
+            <span><span class="heatmap-cell heatmap-non-uk d-inline-block"></span> Non-UK</span>
+            <span><span class="heatmap-cell heatmap-unknown d-inline-block"></span> Unknown</span>
+            <span><span class="heatmap-cell heatmap-oor d-inline-block"></span> Outside tax year</span>
+        </div>
+    </div>
+</div>
+
+<!-- Info Box -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-light border small mb-0">
+            <i class="bi bi-eye-fill text-primary"></i>
+            <strong>Read-only view</strong> &mdash; this calendar is generated automatically from your <a href="{{ url_for('travels.list_travels') }}">Travel Records</a>.
+            Each day is colour-coded based on whether you were in the UK at midnight.
+            Hover over any day for details. To change the data, add or edit entries on the <a href="{{ url_for('travels.list_travels') }}">Travels</a> page.
+        </div>
+    </div>
+</div>
+
+<!-- Per-Country Midnight Breakdown -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% include '_country_breakdown.html' %}
+    </div>
+</div>
+
+<!-- Calendar Grid -->
+<div class="row">
+    {% for month in calendar_data %}
+    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light py-1">
+                <strong class="small">{{ month.name }}</strong>
+            </div>
+            <div class="card-body p-2">
+                <table class="heatmap-table">
+                    <thead>
+                        <tr>
+                            <th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th><th>S</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in month.weeks %}
+                        <tr>
+                            {% for cell in week %}
+                            {% if cell is none %}
+                            <td></td>
+                            {% else %}
+                            <td>
+                                <div class="heatmap-cell
+                                    {% if cell.status == 'uk' %}heatmap-uk
+                                    {% elif cell.status == 'non_uk' %}heatmap-non-uk
+                                    {% elif cell.status == 'out_of_range' %}heatmap-oor
+                                    {% else %}heatmap-unknown{% endif %}"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="{{ cell.date.strftime('%d %b %Y') }} — {{ cell.status | replace('_', ' ') | title }}{% if cell.destination %} ({{ cell.destination }}){% endif %}{% if evidence_counts.get(cell.date) %} | {{ evidence_counts[cell.date] }} evidence{% endif %}">
+                                    {{ cell.day }}
+                                </div>
+                            </td>
+                            {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(el) { return new bootstrap.Tooltip(el); });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Annual Residency Statement — Tax Year {{ tax_year }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; line-height: 1.6; }
+        h1 { color: #1a237e; border-bottom: 3px solid #1a237e; padding-bottom: 10px; }
+        h2 { color: #283593; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        h3 { color: #3949ab; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        th { background-color: #e8eaf6; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f5f5f5; }
+        .summary-box { background: #e8eaf6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .risk-green { color: #2e7d32; font-weight: bold; }
+        .risk-amber { color: #f57f17; font-weight: bold; }
+        .risk-red { color: #c62828; font-weight: bold; }
+        .hash { font-family: monospace; font-size: 0.85em; word-break: break-all; }
+        .disclaimer { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 20px 0; font-size: 0.9em; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #1a237e; font-size: 0.85em; color: #666; }
+        @media print { body { margin: 20px; } }
+    </style>
+</head>
+<body>
+    <h1>📋 Annual Residency Statement</h1>
+    <p><strong>Tax Year:</strong> {{ tax_year }} ({{ start.strftime('%d %B %Y') }} &mdash; {{ end.strftime('%d %B %Y') }})</p>
+    <p><strong>Generated:</strong> {{ generated_at.strftime('%d %B %Y at %H:%M UTC') }}</p>
+    {% if config.get('departure_date') %}
+    <p><strong>Departure Date:</strong> {{ config.departure_date }}</p>
+    {% endif %}
+
+    <div class="summary-box">
+        <h2 style="margin-top:0; border:none;">Summary</h2>
+        <table>
+            <tr><td><strong>Total UK Midnights</strong></td><td><strong>{{ midnight_data.total }}</strong></td></tr>
+            {% if profile %}
+            <tr><td>Operational Profile</td><td>{{ profile.display_name }}</td></tr>
+            <tr><td>Target Midnights</td><td>{{ profile.target_midnights }}</td></tr>
+            <tr><td>Statutory Limit</td><td>{{ profile.stat_limit_midnights }}</td></tr>
+            <tr><td>Buffer</td><td>{{ profile.buffer }}</td></tr>
+            <tr>
+                <td>Risk Status</td>
+                <td class="risk-{{ risk_status|lower }}">{{ risk_status }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        <p><em>Planning basis: accommodation tie only; no UK workdays assumed; targets include safety buffer.</em></p>
+    </div>
+
+    <h2>UK Stays</h2>
+    {% if uk_stays %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Destination</th>
+                <th>Duration (nights)</th>
+                <th>Evidence Files</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stay in uk_stays %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ stay.arrival_date.strftime('%d %b %Y') }}</td>
+                <td>{{ stay.return_date.strftime('%d %b %Y') if stay.return_date else 'Ongoing' }}</td>
+                <td>{{ stay.destination_country }}</td>
+                <td>{{ (stay.return_date - stay.arrival_date).days if stay.return_date else '—' }}</td>
+                <td>{{ stay.evidence_files|length }} file(s)</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No UK stays recorded for this tax year.</em></p>
+    {% endif %}
+
+    <h2>UK Midnight Dates</h2>
+    {% if midnight_data.uk_midnight_dates %}
+    <p>Total: <strong>{{ midnight_data.total }}</strong> UK midnights</p>
+    <table>
+        <thead><tr><th>#</th><th>Date</th><th>Day</th></tr></thead>
+        <tbody>
+            {% for d in midnight_data.uk_midnight_dates %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ d.strftime('%d %B %Y') }}</td>
+                <td>{{ d.strftime('%A') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No UK midnights recorded for this tax year.</em></p>
+    {% endif %}
+
+    <h2>Evidence Inventory</h2>
+    {% if evidence_files %}
+    {% for cat, files in evidence_by_cat.items() %}
+    <h3>{{ cat | replace('_', ' ') | title }}</h3>
+    <table>
+        <thead><tr><th>Filename</th><th>Tags</th><th>Uploaded</th></tr></thead>
+        <tbody>
+            {% for ef in files %}
+            <tr>
+                <td>{{ ef.original_filename }}</td>
+                <td>{{ ef.tags or '—' }}</td>
+                <td>{{ ef.uploaded_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+    {% else %}
+    <p><em>No evidence files tagged for this tax year.</em></p>
+    {% endif %}
+
+    <h2>Hash Manifest</h2>
+    {% if evidence_files %}
+    <table>
+        <thead><tr><th>Filename</th><th>SHA-256 Hash</th><th>Category</th></tr></thead>
+        <tbody>
+            {% for ef in evidence_files %}
+            <tr>
+                <td>{{ ef.original_filename }}</td>
+                <td class="hash">{{ ef.file_hash }}</td>
+                <td>{{ ef.category or 'other' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><em>No evidence files to hash.</em></p>
+    {% endif %}
+
+    <div class="disclaimer">
+        <strong>⚠️ Disclaimer:</strong> This document is generated for personal planning and record-keeping purposes only.
+        It does not constitute tax advice. Consult a qualified tax adviser for guidance on UK tax residency matters.
+    </div>
+
+    <div class="footer">
+        <p>Generated by UK Tax Residency Day Tracker &mdash; {{ generated_at.strftime('%d %B %Y %H:%M UTC') }}</p>
+        <p>Document hash: <span class="hash">{{ midnight_data.total }}:{{ tax_year }}:{{ generated_at.isoformat() }}</span></p>
+    </div>
+</body>
+</html>

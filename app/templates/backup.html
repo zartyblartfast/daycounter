@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Backup & Restore — DayTracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-cloud-download"></i> Backup & Restore</h2>
+        <p class="text-muted">Download a complete backup of your database and evidence vault, or restore from a previous backup.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Current State Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-database"></i> Current Data</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td><i class="bi bi-hdd"></i> Database</td>
+                        <td class="text-end">{{ "%.1f"|format(db_size / 1024) }} KB</td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-folder"></i> Vault Files</td>
+                        <td class="text-end">{{ vault_file_count }} files</td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-archive"></i> Vault Size</td>
+                        <td class="text-end">{{ "%.1f"|format(vault_size / 1024) }} KB</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Backup Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-download"></i> Create Backup</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Each button below takes a <strong>fresh snapshot</strong> of your database and evidence vault right now, packages it into a .zip file, and either downloads it to your browser or stores it on the server.</p>
+                <div class="d-grid gap-2">
+                    <form method="post" action="{{ url_for('backup.create_backup') }}">
+                        <input type="hidden" name="action" value="download">
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            <i class="bi bi-cloud-arrow-down"></i> Create &amp; Download Backup
+                        </button>
+                    </form>
+                    <form method="post" action="{{ url_for('backup.create_backup') }}">
+                        <input type="hidden" name="action" value="store">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-hdd"></i> Create &amp; Save to Server
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Card -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> Restore from Backup</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Upload a previously downloaded backup to restore your data. A safety snapshot of current data is taken automatically before restoring.</p>
+                <form method="post" action="{{ url_for('backup.restore_backup') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="source" value="upload">
+                    <div class="mb-3">
+                        <label for="backup_file" class="form-label">Select backup .zip file</label>
+                        <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".zip" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100" onclick="return confirm('This will replace all current data with the backup. A safety snapshot will be saved first. Continue?')">
+                        <i class="bi bi-upload"></i> Upload &amp; Restore
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Retention & Scheduling Row -->
+<div class="row g-4 mt-2">
+    <!-- Retention Settings -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-sliders"></i> Retention Policy</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Limit the number of server-stored backups to prevent disk usage growing indefinitely. When a new backup is saved, the oldest backups beyond this limit are automatically deleted.</p>
+                <form method="post" action="{{ url_for('backup.update_retention') }}" class="row g-2 align-items-end">
+                    <div class="col-auto">
+                        <label for="retention_count" class="form-label small fw-bold">Keep latest</label>
+                        <input type="number" class="form-control" id="retention_count" name="retention_count"
+                               value="{{ retention }}" min="0" max="999" style="width: 90px;">
+                    </div>
+                    <div class="col-auto pt-4">
+                        <span class="text-muted">backups <small>(0 = unlimited)</small></span>
+                    </div>
+                    <div class="col-auto pt-4">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-check-lg"></i> Save
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3">
+                    <span class="badge bg-{{ 'success' if retention > 0 else 'secondary' }}">
+                        {% if retention > 0 %}
+                            Retaining {{ retention }} most recent backup{{ 's' if retention != 1 }}
+                        {% else %}
+                            Unlimited retention (no auto-pruning)
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Backups -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-clock"></i> Scheduled Backups</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">Automate server-stored backups using <strong>cron</strong> on your VM. The app provides a token-protected endpoint that cron calls to trigger a backup with automatic retention pruning.</p>
+
+                <h6 class="mt-3">Setup steps:</h6>
+                <ol class="small">
+                    <li>
+                        Add a secret token to your <code>.env</code> file:
+                        <pre class="bg-light p-2 rounded mt-1 mb-2"><code>BACKUP_CRON_TOKEN=your-secret-token-here</code></pre>
+                    </li>
+                    <li>
+                        Restart the app to pick up the new token.
+                    </li>
+                    <li>
+                        Add a cron entry on the VM (<code>crontab -e</code>):
+                        <pre class="bg-light p-2 rounded mt-1 mb-2"><code># Daily backup at 02:00
+0 2 * * * curl -sf "http://localhost:8000/backup/cron?token=your-secret-token-here" >> /var/log/daytracker-backup.log 2>&1</code></pre>
+                    </li>
+                </ol>
+
+                <h6>Common schedules:</h6>
+                <table class="table table-sm small mb-0">
+                    <thead><tr><th>Frequency</th><th>Cron expression</th></tr></thead>
+                    <tbody>
+                        <tr><td>Every 6 hours</td><td><code>0 */6 * * *</code></td></tr>
+                        <tr><td>Daily at 2 AM</td><td><code>0 2 * * *</code></td></tr>
+                        <tr><td>Weekly (Sun 3 AM)</td><td><code>0 3 * * 0</code></td></tr>
+                        <tr><td>Monthly (1st, 4 AM)</td><td><code>0 4 1 * *</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Local Backups Table -->
+{% if local_backups %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Server-Stored Backups</h5>
+                <span class="badge bg-primary">{{ local_backups|length }} backup{{ 's' if local_backups|length != 1 }}</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Filename</th>
+                            <th>Created</th>
+                            <th>Size</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bk in local_backups %}
+                        <tr>
+                            <td><i class="bi bi-file-earmark-zip"></i> {{ bk.name }}</td>
+                            <td>{{ bk.created }}</td>
+                            <td>{{ "%.1f"|format(bk.size / 1024) }} KB</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('backup.download_backup', filename=bk.name) }}" class="btn btn-sm btn-outline-primary" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <form method="post" action="{{ url_for('backup.restore_backup') }}" class="d-inline">
+                                    <input type="hidden" name="source" value="local">
+                                    <input type="hidden" name="filename" value="{{ bk.name }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Restore" onclick="return confirm('Restore from this backup? Current data will be backed up first.')">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{{ url_for('backup.delete_backup', filename=bk.name) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this backup permanently?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Info Card -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Backup Contents</h6>
+            </div>
+            <div class="card-body small">
+                <p>Each backup zip contains:</p>
+                <ul class="mb-0">
+                    <li><strong>data/daytracker.db</strong> — Complete SQLite database (travel records, settings, evidence metadata)</li>
+                    <li><strong>vault/</strong> — All uploaded evidence files (boarding passes, receipts, etc.)</li>
+                    <li><strong>manifest.json</strong> — Backup metadata (timestamp, version, file inventory) for verification</li>
+                </ul>
+                <hr>
+                <p class="mb-0"><strong>Recovery workflow:</strong> Download the .zip → copy to cloud storage (OneDrive, Google Drive, etc.) → on a new deployment, upload via the Restore panel above.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

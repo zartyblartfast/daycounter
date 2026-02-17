@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Reports — DayTracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="bi bi-file-earmark-text"></i> Annual Statements</h2>
+    </div>
+</div>
+
+<!-- Generate Report -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Generate New Statement</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('reports.generate_report') }}">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label for="tax_year" class="form-label">Tax Year</label>
+                            <select class="form-select" id="tax_year" name="tax_year">
+                                {% for yr in available_years %}
+                                <option value="{{ yr }}">{{ yr }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-gear"></i> Generate Statement
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <p class="text-muted small mt-2 mb-0">
+                    Generates an HTML report (and PDF if WeasyPrint is available) summarising
+                    UK presence, travel records, and evidence for the selected tax year.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Existing Statements -->
+{% if statements %}
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Tax Year</th>
+                <th>Generated</th>
+                <th>Filename</th>
+                <th>SHA-256</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in statements %}
+            <tr>
+                <td><span class="badge bg-info">{{ s.tax_year }}</span></td>
+                <td>{{ s.generated_at.strftime('%d %b %Y %H:%M') }}</td>
+                <td class="small">{{ s.filename }}</td>
+                <td class="small text-monospace" title="{{ s.file_hash }}">{{ s.file_hash[:16] }}…</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('reports.view_report', statement_id=s.id) }}"
+                           class="btn btn-outline-primary" title="View" target="_blank">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{{ url_for('reports.download_report', statement_id=s.id) }}"
+                           class="btn btn-outline-success" title="Download">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <form method="post" action="{{ url_for('reports.delete_report', statement_id=s.id) }}"
+                              class="d-inline" onsubmit="return confirm('Delete this statement?')">
+                            <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No statements generated yet. Use the form above to create one.
+</div>
+{% endif %}
+{% endblock %}

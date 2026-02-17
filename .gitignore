@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files (contain secrets)
+.env
+
+# Database (user data - not committed)
+data/daytracker.db
+data/daytracker.db.bak
+data/*.db-journal
+
+# Evidence vault (user uploads)
+vault/
+
+# Backups (user data)
+backups/*.zip
+
+# Instance folder
+instance/
+
+# Pytest cache
+.pytest_cache/
+
+# Gunicorn
+gunicorn.ctl
+*.pid
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+nohup.out

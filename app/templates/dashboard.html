@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DayTracker<!-- Per-Country Midnight Breakdown -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% include '_country_breakdown.html' %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <p class="text-muted">Tax Year {{ tax_year }} &mdash; {{ start.strftime('%d %b %Y') }} to {{ end.strftime('%d %b %Y') }}</p>
+    </div>
+</div>
+
+<!-- Workflow Guide -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-light border shadow-sm mb-0">
+            <div class="d-flex align-items-start">
+                <div class="me-3">
+                    <i class="bi bi-eye-fill text-primary fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <strong>Progress Overview</strong> &mdash; this page is <strong>read-only</strong> and updates automatically from your data.
+                    <a class="ms-2 small" data-bs-toggle="collapse" href="#workflowGuide" role="button" aria-expanded="false">
+                        <i class="bi bi-question-circle"></i> How does this work?
+                    </a>
+                    <div class="collapse mt-2" id="workflowGuide">
+                        <div class="card card-body bg-white small">
+                            <h6 class="fw-bold"><i class="bi bi-signpost-split"></i> Getting Started &mdash; Workflow</h6>
+                            <ol class="mb-2">
+                                <li><strong><a href="{{ url_for('settings.settings_page') }}">Settings</a></strong> &mdash; Set your departure date and first non-resident tax year. This configures your midnight targets and limits.</li>
+                                <li><strong><a href="{{ url_for('travels.list_travels') }}">Travels</a></strong> &mdash; Log each trip (past or future). Mark UK stays so the system can count midnights spent in the UK.</li>
+                                <li><strong><a href="{{ url_for('evidence.list_evidence') }}">Evidence Vault</a></strong> &mdash; Upload boarding passes, receipts, and other documents to support your residency records.</li>
+                                <li><strong>Dashboard</strong> (here) &mdash; Automatically shows your progress: midnights used, risk status, and the 5-year TNR clock.</li>
+                                <li><strong><a href="{{ url_for('heatmap.heatmap_view') }}">Heatmap</a></strong> &mdash; Visual calendar of your UK presence, auto-generated from your travel records.</li>
+                            </ol>
+                            <p class="mb-0 text-muted"><i class="bi bi-lightbulb"></i> <strong>Tip:</strong> Start with Settings, then add your travel records. Everything else updates automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- UK Presence Control Profile Panel -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-shield-check"></i> UK Presence Control Profile</h5>
+            </div>
+            <div class="card-body">
+                {% if profile %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-info fs-6">{{ profile.display_name }}</span>
+                    </div>
+                    <div>
+                        <span class="badge {{ badge_class }} fs-5">{{ risk_status }}</span>
+                    </div>
+                </div>
+
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle"></i>
+                    Planning basis: accommodation tie only; no UK workdays assumed; targets include safety buffer.
+                </p>
+
+                <table class="table table-sm table-bordered">
+                    <tbody>
+                        <tr>
+                            <td><strong>Midnights Used</strong></td>
+                            <td class="text-end fw-bold fs-5">{{ midnights_used }}</td>
+                        </tr>
+                        <tr>
+                            <td>Target</td>
+                            <td class="text-end">{{ profile.target_midnights }}</td>
+                        </tr>
+                        <tr>
+                            <td>Statutory Limit</td>
+                            <td class="text-end">{{ profile.stat_limit_midnights }}</td>
+                        </tr>
+                        <tr>
+                            <td>Remaining to Target</td>
+                            <td class="text-end
+                                {% if profile.target_midnights - midnights_used <= profile.buffer %}text-danger fw-bold{% endif %}">
+                                {{ profile.target_midnights - midnights_used }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Remaining to Stat Limit</td>
+                            <td class="text-end">{{ profile.stat_limit_midnights - midnights_used }}</td>
+                        </tr>
+                        <tr>
+                            <td>Buffer</td>
+                            <td class="text-end">{{ profile.buffer }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Progress bar -->
+                <div class="mt-3">
+                    <label class="form-label small text-muted">Usage vs Limits</label>
+                    <div class="progress" style="height: 28px;">
+                        <div class="progress-bar
+                            {% if risk_status == 'GREEN' %}bg-success
+                            {% elif risk_status == 'AMBER' %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                            role="progressbar"
+                            style="width: {{ used_pct }}%"
+                            title="Used: {{ midnights_used }}">
+                            {{ midnights_used }} used
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">0</small>
+                        <small class="text-warning">Target: {{ profile.target_midnights }}</small>
+                        <small class="text-danger">Limit: {{ profile.stat_limit_midnights }}</small>
+                    </div>
+                </div>
+                {% elif pre_departure %}
+                <div class="alert alert-info mb-3">
+                    <h6 class="alert-heading"><i class="bi bi-calendar-event"></i> Pre-Departure Period</h6>
+                    <p class="mb-1">
+                        Your settings are configured correctly. Profile-based midnight tracking
+                        begins in tax year <strong>{{ first_full }}</strong>.
+                    </p>
+                    <p class="mb-0 small text-muted">
+                        The current tax year ({{ tax_year }}) is before your first full non-resident year,
+                        so no midnight limits apply yet.
+                    </p>
+                </div>
+
+                {% if departure_date and days_to_departure is not none %}
+                <div class="d-flex align-items-center justify-content-center py-3">
+                    <div class="text-center">
+                        <div class="display-4 fw-bold text-primary">{{ days_to_departure }}</div>
+                        <div class="text-muted">days until departure</div>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-airplane"></i>
+                            {{ departure_date.strftime('%d %B %Y') }}
+                        </div>
+                    </div>
+                </div>
+                {% elif departure_date %}
+                <div class="text-center py-3">
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-check-circle"></i> Departed
+                    </span>
+                    <div class="small text-muted mt-1">
+                        Departure date: {{ departure_date.strftime('%d %B %Y') }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <hr>
+                <p class="small text-muted mb-0">
+                    <i class="bi bi-lightbulb"></i>
+                    <strong>Tip:</strong> You can still log travel during this period.
+                    Midnights will be counted once your first non-resident tax year begins.
+                </p>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No profile configured for this tax year. Check your
+                    <a href="{{ url_for('settings.settings_page') }}">settings</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TNR 5-Year Clock Widget -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> TNR 5-Year Clock</h5>
+            </div>
+            <div class="card-body">
+                {% if tnr_data %}
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <td>First Full Non-Resident Tax Year</td>
+                            <td class="text-end fw-bold">{{ tnr_data.first_full }}</td>
+                        </tr>
+                        <tr>
+                            <td>Full Non-Resident Years Completed</td>
+                            <td class="text-end">
+                                <span class="fw-bold fs-5">{{ tnr_data.completed }}</span> of 5
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Target Completion Year</td>
+                            <td class="text-end">{{ tnr_data.target_completion }}</td>
+                        </tr>
+                        <tr>
+                            <td>TNR Safe Date</td>
+                            <td class="text-end fw-bold text-success">
+                                {{ tnr_data.safe_date.strftime('%d %B %Y') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="mt-3">
+                    <label class="form-label small text-muted">5-Year Progress</label>
+                    <div class="progress" style="height: 28px;">
+                        <div class="progress-bar bg-info progress-bar-striped"
+                            role="progressbar"
+                            style="width: {{ tnr_data.pct }}%">
+                            {{ tnr_data.completed }} / 5 years
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Year boxes -->
+                <div class="d-flex justify-content-between mt-3">
+                    {% for i in range(5) %}
+                    <div class="text-center flex-fill mx-1">
+                        <div class="border rounded p-2
+                            {% if i < tnr_data.completed %}bg-success text-white
+                            {% elif i == tnr_data.completed %}bg-warning
+                            {% else %}bg-light{% endif %}">
+                            <small class="fw-bold">Yr {{ i + 1 }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="alert alert-secondary mt-3 mb-0 small">
+                    <i class="bi bi-info-circle"></i>
+                    This is a planning timer only, not tax advice.
+                </div>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Configure your departure details in
+                    <a href="{{ url_for('settings.settings_page') }}">settings</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Row -->
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <h3 class="text-primary">{{ midnights_used }}</h3>
+                <p class="text-muted mb-0">UK Midnights This Tax Year</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                <h3 class="text-info">{{ days_left }}</h3>
+                <p class="text-muted mb-0">Days Remaining in Tax Year</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm text-center">
+            <div class="card-body">
+                {% if next_travel %}
+                <h3 class="text-success">{{ next_travel.arrival_date.strftime('%d %b') }}</h3>
+                <p class="text-muted mb-0">Next: {{ next_travel.destination_country }}</p>
+                {% else %}
+                <h3 class="text-muted">&mdash;</h3>
+                <p class="text-muted mb-0">No Upcoming Travel</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
