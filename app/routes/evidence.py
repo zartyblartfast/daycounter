@@ -15,6 +15,7 @@ from flask import (
 
 from app.models import db, EvidenceFile, Travel, EVIDENCE_CATEGORIES
 from app.tax_year import current_tax_year
+from app.routes.heatmap import _get_available_tax_years
 
 evidence_bp = Blueprint("evidence", __name__)
 
@@ -48,9 +49,12 @@ def list_evidence():
     files = query.all()
     travels = Travel.query.order_by(Travel.arrival_date.desc()).all()
 
+    tax_years = _get_available_tax_years()
+
     return render_template(
         "evidence.html",
         files=files,
+        tax_years=tax_years,
         categories=EVIDENCE_CATEGORIES,
         travels=travels,
         filter_category=filter_category,
