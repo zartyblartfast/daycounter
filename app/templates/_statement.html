@@ -118,62 +118,56 @@
     <p><em>No evidence files tagged for this tax year.</em></p>
     {% endif %}
 
-    <h2>Hash Manifest</h2>
-    {% if evidence_files %}
-    <table>
-        <thead><tr><th>Filename</th><th>SHA-256 Hash</th><th>Category</th></tr></thead>
-        <tbody>
-            {% for ef in evidence_files %}
-            <tr>
-                <td>{{ ef.original_filename }}</td>
-                <td class="hash">{{ ef.file_hash }}</td>
-                <td>{{ ef.category or 'other' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p><em>No evidence files to hash.</em></p>
-    {% endif %}
-
-    <h2>Evidence Manifest</h2>
+<h2>Evidence Manifest</h2>
     <p><em>Verifiable audit trail of all evidence held at statement generation time.</em></p>
-    {% if evidence_files %}
-    <table>
-        <thead>
+    {% if encoded_evidence %}
+    {% for item in encoded_evidence %}
+    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 15px 0; page-break-inside: avoid;">
+        <table style="margin: 0;">
             <tr>
-                <th>#</th>
-                <th>Original Filename</th>
-                <th>SHA-256 Hash</th>
-                <th>Uploaded</th>
-                <th>Category</th>
-                <th>Tags</th>
-                <th>Linked Travel</th>
+                <td style="border: none; width: 130px; font-weight: 600; vertical-align: top;">File</td>
+                <td style="border: none;"><strong>{{ item.record.original_filename }}</strong></td>
             </tr>
-        </thead>
-        <tbody>
-            {% for ef in evidence_files %}
             <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ ef.original_filename }}</td>
-                <td class="hash">{{ ef.file_hash }}</td>
-                <td>{{ ef.uploaded_at.strftime('%d %b %Y %H:%M UTC') }}</td>
-                <td>{{ (ef.category or 'other') | replace('_', ' ') | title }}</td>
-                <td>{{ ef.tags or '—' }}</td>
-                <td>
-                    {% if ef.travel %}
-                    {{ ef.travel.destination_country }}
-                    ({{ ef.travel.arrival_date.strftime('%d %b %Y') }} &ndash;
-                    {{ ef.travel.return_date.strftime('%d %b %Y') if ef.travel.return_date else 'ongoing' }})
+                <td style="border: none; font-weight: 600; vertical-align: top;">Category</td>
+                <td style="border: none;">{{ (item.record.category or 'other') | replace('_', ' ') | title }}</td>
+            </tr>
+            <tr>
+                <td style="border: none; font-weight: 600; vertical-align: top;">Tags</td>
+                <td style="border: none;">{{ item.record.tags or '&mdash;' }}</td>
+            </tr>
+            <tr>
+                <td style="border: none; font-weight: 600; vertical-align: top;">Uploaded</td>
+                <td style="border: none;">{{ item.record.uploaded_at.strftime('%d %b %Y %H:%M UTC') }}</td>
+            </tr>
+            <tr>
+                <td style="border: none; font-weight: 600; vertical-align: top;">Linked Travel</td>
+                <td style="border: none;">
+                    {% if item.record.travel %}
+                    {{ item.record.travel.destination_country }}
+                    ({{ item.record.travel.arrival_date.strftime('%d %b %Y') }} &ndash;
+                    {{ item.record.travel.return_date.strftime('%d %b %Y') if item.record.travel.return_date else 'ongoing' }})
                     {% else %}
-                    —
+                    &mdash;
                     {% endif %}
                 </td>
             </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <p><strong>Total evidence files:</strong> {{ evidence_files|length }}</p>
+            <tr>
+                <td style="border: none; font-weight: 600; vertical-align: top;">Integrity</td>
+                <td style="border: none;"><span class="hash" style="font-size: 0.7em; color: #999;">SHA-256: {{ item.record.file_hash }}</span></td>
+            </tr>
+        </table>
+        {% if item.is_image and item.data_uri %}
+        <div style="margin-top: 12px; text-align: center; background: #fafafa; padding: 10px; border-radius: 4px;">
+            <img src="{{ item.data_uri }}" alt="{{ item.record.original_filename }}" style="max-width: 50%; height: auto; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <p style="margin: 8px 0 0; font-size: 0.8em; color: #888;">{{ item.record.original_filename }}</p>
+        </div>
+        {% elif not item.is_image %}
+        <p style="margin-top: 10px; color: #999; font-style: italic; font-size: 0.9em;">&#128196; Non-image file &mdash; available in evidence vault</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <p><strong>Total evidence files:</strong> {{ encoded_evidence|length }}</p>
     {% else %}
     <p><em>No evidence files recorded for this tax year.</em></p>
     {% endif %}

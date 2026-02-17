@@ -14,6 +14,9 @@ from flask import (
     make_response,
 )
 
+import base64
+import mimetypes
+
 from app.models import db, Travel, EvidenceFile, AnnualStatement
 from app.config_manager import get_config
 from app.tax_year import (
@@ -27,6 +30,33 @@ from app.uk_midnights import compute_uk_midnights_for_tax_year
 
 reports_bp = Blueprint("reports", __name__)
 
+
+
+IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tiff', '.tif'}
+
+
+def _encode_evidence_files(evidence_files, vault_path):
+    """Read evidence files from disk and base64-encode images for embedding."""
+    encoded = []
+    for ef in evidence_files:
+        filepath = os.path.join(vault_path, ef.filename)
+        entry = {
+            'record': ef,
+            'is_image': False,
+            'data_uri': None,
+        }
+        ext = os.path.splitext(ef.original_filename)[1].lower()
+        if ext in IMAGE_EXTENSIONS and os.path.exists(filepath):
+            mime = mimetypes.guess_type(ef.original_filename)[0] or 'image/png'
+            try:
+                with open(filepath, 'rb') as img_f:
+                    b64 = base64.b64encode(img_f.read()).decode('ascii')
+                entry['is_image'] = True
+                entry['data_uri'] = f'data:{mime};base64,{b64}'
+            except Exception:
+                pass  # If file can't be read, skip embedding
+        encoded.append(entry)
+    return encoded
 
 def _get_available_tax_years():
     """Get list of tax years with data."""
@@ -82,6 +112,10 @@ def _generate_statement_html(tax_year_label_str: str) -> str:
 
     now = datetime.datetime.utcnow()
 
+    # Encode evidence files for embedding in statement
+    vault_path = current_app.config["VAULT_PATH"]
+    encoded_evidence = _encode_evidence_files(evidence_files, vault_path)
+
     html = render_template(
         "_statement.html",
         tax_year=tax_year_label_str,
@@ -93,6 +127,7 @@ def _generate_statement_html(tax_year_label_str: str) -> str:
         uk_stays=uk_stays,
         evidence_files=evidence_files,
         evidence_by_cat=evidence_by_cat,
+        encoded_evidence=encoded_evidence,
         generated_at=now,
         config=config,
     )
