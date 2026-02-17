@@ -11,6 +11,7 @@ from app.tax_year import (
     tax_year_start,
     tax_year_end,
     all_tax_years_between,
+    next_tax_year,
     _parse_label,
 )
 from app.profiles import get_profile_for_tax_year, compute_risk_status, risk_badge_class
@@ -100,7 +101,12 @@ def _build_calendar_data(tax_year_label_str: str, day_status: dict, day_details:
 
 
 def _get_available_tax_years():
-    """Get list of tax years with data plus current."""
+    """Get list of tax years with data plus current.
+
+    For open-ended travel (no return date), generates all tax years
+    from arrival through today plus the next tax year for planning.
+    """
+    import datetime as _dt
     from app.tax_year import tax_year_label as ty_label
     travels = Travel.query.order_by(Travel.arrival_date).all()
     years = set()
@@ -109,6 +115,12 @@ def _get_available_tax_years():
         years.add(ty_label(t.arrival_date))
         if t.return_date:
             years.add(ty_label(t.return_date))
+        else:
+            # Open-ended trip: include all tax years from arrival to now + next
+            today_label = ty_label(_dt.date.today())
+            next_label = next_tax_year(today_label)
+            span = all_tax_years_between(ty_label(t.arrival_date), next_label)
+            years.update(span)
     return sorted(years)
 
 
