@@ -116,10 +116,12 @@ def _get_available_tax_years():
         if t.return_date:
             years.add(ty_label(t.return_date))
         else:
-            # Open-ended trip: include all tax years from arrival to now + next
-            today_label = ty_label(_dt.date.today())
-            next_label = next_tax_year(today_label)
-            span = all_tax_years_between(ty_label(t.arrival_date), next_label)
+            # Open-ended trip: include all tax years from arrival
+            # through 5 years ahead for long-term planning
+            horizon = current_tax_year()
+            for _ in range(5):
+                horizon = next_tax_year(horizon)
+            span = all_tax_years_between(ty_label(t.arrival_date), horizon)
             years.update(span)
     return sorted(years)
 
