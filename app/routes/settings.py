@@ -31,26 +31,11 @@ def save_settings():
             if len(parts) != 2 or int(parts[1]) != int(parts[0]) + 1:
                 raise ValueError(f"Invalid tax year format: {first_full}")
 
-        # Build profiles
-        profiles = {}
-        for key in ["year_1", "year_2", "year_3_plus"]:
-            target = request.form.get(f"{key}_target", "")
-            limit = request.form.get(f"{key}_limit", "")
-            buffer = request.form.get(f"{key}_buffer", "")
-            if target and limit and buffer:
-                profiles[key] = {
-                    "target_midnights": int(target),
-                    "stat_limit_midnights": int(limit),
-                    "buffer": int(buffer),
-                }
-
         new_data = {}
         if departure_date:
             new_data["departure_date"] = departure_date
         if first_full:
             new_data["first_full_nonresident_tax_year"] = first_full
-        if profiles:
-            new_data["profiles"] = profiles
 
         update_config(new_data)
         flash("Settings saved successfully.", "success")

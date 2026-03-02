@@ -38,6 +38,7 @@ def create_app(config_override: dict | None = None) -> Flask:
         from app.routes.evidence import evidence_bp
         from app.routes.reports import reports_bp
         from app.routes.settings import settings_bp
+        from app.routes.srt import srt_bp
         from app.routes.api import api_bp
         from app.routes.backup import backup_bp
 
@@ -47,6 +48,7 @@ def create_app(config_override: dict | None = None) -> Flask:
         app.register_blueprint(evidence_bp, url_prefix="/evidence")
         app.register_blueprint(reports_bp, url_prefix="/reports")
         app.register_blueprint(settings_bp, url_prefix="/settings")
+        app.register_blueprint(srt_bp, url_prefix="/srt")
         app.register_blueprint(api_bp, url_prefix="/api")
         app.register_blueprint(backup_bp, url_prefix="/backup")
 

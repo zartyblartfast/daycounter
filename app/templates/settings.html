@@ -7,8 +7,8 @@
         <h2><i class="bi bi-gear"></i> Settings</h2>
         <div class="alert alert-light border small mt-2 mb-0">
             <i class="bi bi-1-circle-fill text-primary"></i>
-            <strong>Start here</strong> &mdash; configure your departure date and tax year profiles before adding travel records.
-            These settings determine how your midnight targets and risk status are calculated across the app.
+            <strong>Start here</strong> &mdash; configure your departure date and tax year before adding travel records.
+            For midnight threshold profiles, visit the <a href="{{ url_for('srt.srt_page') }}">SRT</a> page.
         </div>
     </div>
 </div>
@@ -39,48 +39,6 @@
                             <div class="form-text">Format: YYYY-YYYY (e.g. 2026-2027)</div>
                         </div>
                     </div>
-
-                    <!-- Profile Settings -->
-                    <h6 class="border-bottom pb-2 mb-3">Profile Settings</h6>
-                    {% set profiles = config.get('profiles', {}) %}
-
-                    {% for key, label in [('year_1', 'Year 1'), ('year_2', 'Year 2'), ('year_3_plus', 'Year 3+')] %}
-                    {% set p = profiles.get(key, {}) %}
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <strong>{{ label }}</strong>
-                            {% if key == 'year_1' %}
-                            <span class="text-muted small">— First full non-resident tax year</span>
-                            {% elif key == 'year_2' %}
-                            <span class="text-muted small">— Second full non-resident tax year</span>
-                            {% else %}
-                            <span class="text-muted small">— Third and subsequent years</span>
-                            {% endif %}
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Target Midnights</label>
-                                    <input type="number" class="form-control" name="{{ key }}_target"
-                                           value="{{ p.get('target_midnights', '') }}" min="0" max="366">
-                                    <div class="form-text">Planning target (with buffer).</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Statutory Limit</label>
-                                    <input type="number" class="form-control" name="{{ key }}_limit"
-                                           value="{{ p.get('stat_limit_midnights', '') }}" min="0" max="366">
-                                    <div class="form-text">Legal maximum midnights.</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Buffer</label>
-                                    <input type="number" class="form-control" name="{{ key }}_buffer"
-                                           value="{{ p.get('buffer', '') }}" min="0" max="50">
-                                    <div class="form-text">Safety margin days.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
@@ -117,16 +75,10 @@
                 <p>The first complete UK tax year (6 Apr – 5 Apr) after your departure.
                    This determines which profile applies to each subsequent year.</p>
 
-                <h6>Profile Mapping</h6>
-                <ul>
-                    <li><strong>Year 1</strong>: First full non-resident tax year (strictest limits)</li>
-                    <li><strong>Year 2</strong>: Second year (relaxed limits)</li>
-                    <li><strong>Year 3+</strong>: Third and all subsequent years</li>
-                </ul>
-
-                <h6>Target vs Statutory Limit</h6>
-                <p>The <em>target</em> is your planning goal (conservative). The <em>statutory limit</em>
-                   is the legal maximum. The <em>buffer</em> provides early warning when approaching the target.</p>
+                <h6>Midnight Threshold Profiles</h6>
+                <p>Profile settings (target midnights, statutory limits, and buffers) have
+                   moved to the <a href="{{ url_for('srt.srt_page') }}">SRT</a> page, where
+                   you can configure them alongside other residency test features.</p>
 
                 <div class="alert alert-warning mb-0">
                     <i class="bi bi-exclamation-triangle"></i>

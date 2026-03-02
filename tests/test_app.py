@@ -67,6 +67,11 @@ class TestAppRoutes:
         assert resp.status_code == 200
         assert b"Settings" in resp.data
 
+    def test_srt(self, client):
+        resp = client.get("/srt/")
+        assert resp.status_code == 200
+        assert b"Statutory Residency Test" in resp.data
+
     def test_api_status(self, client):
         resp = client.get("/api/status")
         assert resp.status_code == 200
