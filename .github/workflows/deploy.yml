@@ -1,0 +1,23 @@
+name: Deploy Day Tracker
+
+on:
+  push:
+    branches: [ Main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /opt/daytracker
+            git pull origin Main
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+            systemctl restart daytracker
+            echo "Day Tracker deployed successfully"
